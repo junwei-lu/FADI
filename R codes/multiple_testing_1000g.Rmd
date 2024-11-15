@@ -1,0 +1,152 @@
+---
+title: "Untitled"
+output: html_document
+---
+Define power sketching method for parallel results aggregation:
+```{r}
+fast_pca_final<-function(y_ls,p0,qq){
+  d <- dim(y_ls[[1]])[1]
+  omega<-matrix(rnorm(d*p0),d,p0)
+  
+  for (q in 1:qq){
+    Yt <- 0
+    L <- length(y_ls)
+    for (l in 1:L){
+      Y <- t(y_ls[[l]])%*%omega
+      Y <- y_ls[[l]] %*% Y
+      Yt <- Yt + Y
+    }
+    Yt <- Yt / L
+    omega <- Yt
+  }
+  
+  
+  Q<-svd(Yt)$u
+  return('u'=Q)
+}
+
+```
+
+Computing leading PC estimator by aggregating FADI results (Step 3 of FADI):
+```{r}
+y_ls <- list()
+k_ls <- c()
+rt_ls <- c()
+ts <- Sys.time()
+for (mc in 1:1000){
+  fname<-paste(c("/ncf/xlin_covid/Users/sshen/dissertation_1.5/real_data/results/results_",mc,".RData"),collapse = '_')
+  load(fname)
+  y_ls <- append(y_ls, list(vkl))
+  rt_ls <- c(rt_ls,rt)
+  k_ls <- c(k_ls, kl)
+}
+vtild <- fast_pca_final(y_ls, 50, 3)
+vtild <- vtild[,1:4]
+te <- Sys.time()
+kh <- round(median(k_ls))
+te-ts + max(rt_ls) #runtime for 
+```
+
+
+```{r}
+
+K = kh
+p = 50
+load("/ncf/xlin_covid/Users/sshen/dissertation_1.5/real_data/1000g_sbm95.RData")
+info <- read.delim("/n/home_fasse/shutingshen/ncf_user/fast_pca/1KG_TRACE_pca.txt", sep = " ")
+
+ll <- order(info$Population.2)
+pop_vec <- info$Population.2[ll]
+
+loc_pure <- pop_vec %in% c("AFR", "EAS", "EUR", "SAS")
+pop_pure <- pop_vec[loc_pure]
+pop_pure <- droplevels(pop_pure)
+Mh <- sbm95[loc_pure, loc_pure]
+d = dim(Mh)[1]
+
+Mtild <- vtild%*%(t(vtild)%*%Mh%*%vtild)%*%t(vtild)
+lmtild <- (t(vtild)%*%Mh%*%vtild)
+Mtild[Mtild <0] <- 0 ####correction for entries with negative values
+Mtild[Mtild >1] <- 1 ####correction for entries with values larger than 1
+
+te-ts
+```
+Pairwise testing on whether two subjects i and j belong to the same super population:
+
+```{r}
+bad_solve <- function(A){
+  svdA <- svd(A)
+  inv <- svdA$u%*%diag((svdA$d)^{-1})%*%t(svdA$v)
+  return(inv)
+}
+```
+
+
+```{r}
+nodes_loc <- c(3,5,6,7,662,664,665,666,1166,1168,1169,1171,1576:1579)#preselected subjects
+nodes_pop <- pop_pure[nodes_loc]
+
+p_value_mat <- matrix(NA, 16,16)
+p_value_mat1 <- matrix(NA, 16,16)
+ts <-Sys.time()
+svdM <- svd(Mh)
+te <- Sys.time()
+vkh <- svdM$u[,1:4]
+
+runtime_svd <- te - ts
+
+Mkh <- vkh%*%(t(vkh)%*%Mh%*%vkh)%*%t(vkh)
+W0 <- Mh - Mkh
+lmk <- diag(svdM$d[1:4])
+lmkh <- c()
+for (i in 1:4){
+  dk <- svdM$d[i]
+  dk <- (dk^{-1} + dk^{-3}*sum((vkh[,i])^2*diag(W0%*%W0)))^{-1}
+  lmkh <- c(lmkh, dk)
+}
+lmkh <- diag(lmkh)
+
+W0 <- Mh - vkh%*%lmkh%*%t(vkh)
+
+
+for(ii in 1:length(nodes_loc)){
+  for(ij in 1:length(nodes_loc)){
+    i <- nodes_loc[ii]
+    j <- nodes_loc[ij]
+    sig_i <- solve(lmtild)%*%t(vtild)%*%( (  (Mtild[i,])*(1-Mtild[i,])  )  *vtild  )%*%solve(lmtild)
+    
+    sig_j <- solve(lmtild)%*%t(vtild)%*%( (    (Mtild[j,])*(1-Mtild[j,])   ) *vtild  )%*%solve(lmtild)
+    
+    
+    chiq_i_j <- (vtild[i,] - vtild[j,])%*%solve(sig_i + sig_j)%*%(vtild[i,] - vtild[j,])
+    p_value_mat[ii,ij] <- 1-pchisq(chiq_i_j,df = 4)
+    sig_i <- solve(lmk)%*%t(vkh)%*%( (    (W0[i,])^2   ) *vkh  )%*%solve(lmk)
+    
+    sig_j <- solve(lmk)%*%t(vkh)%*%( (    (W0[j,])^2   ) *vkh  )%*%solve(lmk)
+    
+    
+    chiq_i_j <- (vkh[i,] - vkh[j,])%*%bad_solve(sig_i + sig_j)%*%(vkh[i,] - vkh[j,])
+    p_value_mat1[ii,ij] <- 1-pchisq(chiq_i_j,df = 4)
+  }
+}
+```
+P values of multiple testing for FADI and traditional PCA:
+```{r}
+p_value_mat<-round(p_value_mat,digits = 4)
+p_value_mat1<-round(p_value_mat1,digits = 4)
+```
+
+
+Compute misclustering rate for FADI and traditional PCA
+```{r}
+ll <- kmeans(vtild,vtild[c(661, 1165, 1569, 2058 ),])
+ll <- kmeans(vtild,centers = 4, nstart = 25)
+1-mean(ll$cluster == c(rep(3,661),rep(1,504),rep(4,404),rep(2,489)))
+
+ll <- kmeans(vkh,vkh[c(661, 1165, 1569, 2058 ),])
+ll <- kmeans(vkh,centers = 4, nstart = 25)
+1-mean(ll$cluster == c(rep(2,661),rep(3,504),rep(1,404),rep(4,489)))
+
+
+```
+
