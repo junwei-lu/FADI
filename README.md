@@ -11,6 +11,9 @@ Our paper is [here](https://arxiv.org/pdf/2306.06857):
 
 Shen, S., Lu, J. and Lin, X., 2023. FADI: Fast Distributed Principal Component Analysis With High Accuracy for Large-Scale Federated Data. arXiv preprint arXiv:2306.06857.
 
+### FADI Method Workflow
+![FADI_workflow](FADI_workflow.png)
+
 ## Tutorial
 The R codes folder contains the R scripts for simulation studies, and application of FADI to the 1000 Genomes data (estimation of principal eigenspace and inferential analysis under the degree-corrected mixed membership model). 
 
@@ -23,5 +26,4 @@ R script inference_1000g_SBM.R implements Step 1 and Step 2 of FADI for computin
 ## Data
 The folder Data contains supplementary data for applying FADI to inferential analysis of the 1000 Genomes data. The file 1000g_sbm95.RData contains an undirected graph generated based on the 1000 Genomes data, used for the inferential application of FADI, and the file 1KG_TRACE_pca.txt contains the population information of the 1000 Genomes data subjects.
 
-## Workflow
-![FADI_workflow](FADI_workflow.png)
+
