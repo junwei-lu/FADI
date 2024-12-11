@@ -1,6 +1,17 @@
-# Reproducibility Files for FADI 
+# Fast PCA for Large Dimension and Sample
 
-## R codes
+## Introduction
+
+This package is the R code for the FAst DIstributed
+(FADI) PCA method for federated data when both the dimension $d$ and the sample
+size $n$ are ultra-large, by simultaneously performing parallel computing along $d$ and
+distributed computing along $n$. 
+
+Our paper is [here](https://arxiv.org/pdf/2306.06857):
+
+Shen, S., Lu, J. and Lin, X., 2023. FADI: Fast Distributed Principal Component Analysis With High Accuracy for Large-Scale Federated Data. arXiv preprint arXiv:2306.06857.
+
+## Tutorial
 The R codes folder contains the R scripts for simulation studies, and application of FADI to the 1000 Genomes data (estimation of principal eigenspace and inferential analysis under the degree-corrected mixed membership model). 
 
 R scripts example_spiked_covariance.R, example_GMM.R, example_DCMM.R, and example_missing_matrix.R contain the simulation codes for implementing FADI under the spiked covariance model, the Gaussian mixture models (GMM), the degree-corrected mixed membership (DCMM) model, and the incomplete matrix inference model respectively. Input parameters are d-dimension of data, mc-index of independent Monte Carlo simulations, and rt-ratio of $Lp/d$.
